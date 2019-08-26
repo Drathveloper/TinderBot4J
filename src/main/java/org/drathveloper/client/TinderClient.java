@@ -145,7 +145,7 @@ public class TinderClient {
         Map<String, String> headers = this.buildHeaders(true);
         String url = String.format(parameters.getURL(ClientConstants.SUPER_LIKE_MAPPING), user.getId());
         Map<String, Object> output = jsonParser.jsonToMap(client.executePost(url, headers, null));
-        if(!(boolean)output.get("limit_exceeded")){
+        if(output.get("limit_exceeded")==null){
             logger.info("End super liking user " + user.getId());
             user.setLiked(true);
         } else {
