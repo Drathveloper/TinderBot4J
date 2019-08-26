@@ -36,6 +36,10 @@ public class UserBatch {
         }
     }
 
+    public void removeIndex(int index){
+        users.remove(index);
+    }
+
     public void removeRange(int start, int end){
         users.subList(start, end).clear();
     }

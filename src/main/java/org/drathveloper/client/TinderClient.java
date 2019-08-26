@@ -92,11 +92,21 @@ public class TinderClient {
         for(boolean flag : flagList){
             User likableUser = availableMatches.getUser(index);
             if(flag){
-                if(!this.likeProfile(likableUser)){
-                    availableMatches.removeRange(index, availableMatches.size());
-                    this.superLikeProfile(likableUser);
-                    availableMatches.addUser(likableUser);
-                    throw new NotEnoughLikesException("Likes available = 0");
+                try {
+                    this.likeProfile(likableUser);
+                    if (likableUser.isMatch()) {
+                        this.sendMessage(likableUser);
+                    }
+                } catch(NotEnoughLikesException ex){
+                    availableMatches.removeRange(index + 1, availableMatches.size());
+                    try {
+                        logger.info("Not enough likes, trying super like");
+                        this.superLikeProfile(likableUser);
+                    } catch(NotEnoughLikesException e){
+                        logger.info("Not enough likes & super likes, exiting");
+                        availableMatches.removeIndex(index);
+                        throw new NotEnoughLikesException("Not enough likes & superlikes");
+                    }
                 }
             } else {
                 this.dislikeProfile(likableUser);
@@ -117,18 +127,17 @@ public class TinderClient {
         logger.info("End passing user " + user.getId());
     }
 
-    public boolean likeProfile(User user) throws HttpGenericException {
+    public void likeProfile(User user) throws HttpGenericException, NotEnoughLikesException {
         logger.info("Start liking user " + user.getId());
         Map<String, String> headers = this.buildHeaders(true);
         String url = String.format(parameters.getURL(ClientConstants.LIKE_MAPPING), user.getId());
         Map<String, Object> output = jsonParser.jsonToMap(client.executeGet(url, headers));
         user.setLiked(true);
-        if(output.get("match").equals(true)){
-            user.setMatch(true);
-            this.sendMessage(user);
+        if(((Double) output.get("likes_remaining")) <= 0){
+            throw new NotEnoughLikesException("You dont have enough likes");
         }
         logger.info("End liking user " + user.getId());
-        return (((Double) output.get("likes_remaining")) > 0);
+        user.setMatch(output.get("match").equals(true));
     }
 
     public void superLikeProfile(User user) throws HttpGenericException, NotEnoughLikesException {
