@@ -1,7 +1,7 @@
 # TinderBot4J
 
 # Introduction
-Welcome to my Tinder Java bot. It features almost everything you would need to use Tinder without having to lose time passing and liking profiles.
+Welcome to my Tinder Java bot. It features almost everything you would need to use Tinder without losing time reviewing profiles.
 Don't expect overcomplicated features like facial recognition or real conversation capabilities.
 
 # Features
