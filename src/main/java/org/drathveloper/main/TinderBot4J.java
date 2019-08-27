@@ -5,6 +5,8 @@ import org.drathveloper.exceptions.HttpGenericException;
 import org.drathveloper.exceptions.NotEnoughLikesException;
 import org.drathveloper.facades.db.MySQLFacade;
 import org.drathveloper.facades.db.SQLFacade;
+import org.drathveloper.models.Match;
+import org.drathveloper.models.MatchList;
 import org.drathveloper.models.User;
 import org.drathveloper.models.UserBatch;
 import org.slf4j.Logger;
@@ -72,6 +74,7 @@ class TinderBot4J implements Runnable {
                 printInfo(userBatch);
                 client.batchedLike(userBatch);
             } else {
+                this.sendMessagesToMatches();
                 logger.info("Sleeping: " + SLEEP_TIME + "ms");
                 Thread.sleep(SLEEP_TIME);
             }
@@ -84,6 +87,16 @@ class TinderBot4J implements Runnable {
         }
         this.addToDatabase(userBatch);
         logger.info("Batched like processing ended");
+    }
+
+    private void sendMessagesToMatches() throws HttpGenericException {
+        logger.info("Start handling new matches");
+        MatchList matchesList = client.getMatchList();
+        List<Match> unhandledMatches = matchesList.findMatchesWithoutConversation();
+        for(Match match : unhandledMatches){
+            client.sendMessage(match);
+        }
+        logger.info("End handling new matches");
     }
 
     private void addToDatabase(UserBatch userBatch){

@@ -5,6 +5,8 @@ import org.drathveloper.exceptions.HttpGenericException;
 import org.drathveloper.exceptions.NotEnoughLikesException;
 import org.drathveloper.facades.JSONParserFacade;
 import org.drathveloper.facades.HttpClientFacade;
+import org.drathveloper.models.Match;
+import org.drathveloper.models.MatchList;
 import org.drathveloper.models.User;
 import org.drathveloper.models.UserBatch;
 import org.slf4j.Logger;
@@ -94,9 +96,6 @@ public class TinderClient {
             if(flag){
                 try {
                     this.likeProfile(likableUser);
-                    if (likableUser.isMatch()) {
-                        this.sendMessage(likableUser);
-                    }
                 } catch(NotEnoughLikesException ex){
                     availableMatches.removeRange(index + 1, availableMatches.size());
                     try {
@@ -166,11 +165,10 @@ public class TinderClient {
         return availableUsers;
     }
 
-    public void sendMessage(User user) throws HttpGenericException {
-        logger.info("Start send message to " + user.getId());
-        String matchId = this.getMatchIdByUserId(user.getId());
+    public void sendMessage(Match match) throws HttpGenericException {
+        logger.info("Start send message to " + match.getUserId());
         Map<String, String> headers = this.buildHeaders(true);
-        String url = String.format(parameters.getURL(ClientConstants.SEND_MSG_MAPPING), matchId);
+        String url = String.format(parameters.getURL(ClientConstants.SEND_MSG_MAPPING), match.getMatchId());
         Map<String, String> body = new HashMap<>();
         String message = parameters.getMessageFromPreloaded();
         body.put("message", message);
@@ -197,6 +195,18 @@ public class TinderClient {
         logger.info("Match id not found");
         logger.info("End get match id from user id");
         return null;
+    }
+
+    public MatchList getMatchList() throws HttpGenericException {
+        logger.info("Start get matches list");
+        Map<String, String> headers = this.buildHeaders(true);
+        String url = parameters.getURL(ClientConstants.MATCHES_MAPPING);
+        String jsonBody = "{\"last_activity_date\":\"\",\"nudge\":false}";
+        Map<String, Object> output = jsonParser.jsonToMap(client.executePost(url, headers, jsonBody));
+        List<Object> matches = (ArrayList<Object>) output.get("matches");
+        MatchList list = new MatchList(matches);
+        logger.info("End get matches list");
+        return list;
     }
 
 }
