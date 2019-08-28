@@ -2,9 +2,11 @@ package org.drathveloper.main;
 
 import org.drathveloper.client.TinderClient;
 import org.drathveloper.exceptions.HttpGenericException;
+import org.drathveloper.exceptions.MailerGenericException;
 import org.drathveloper.exceptions.NotEnoughLikesException;
 import org.drathveloper.facades.db.MySQLFacade;
 import org.drathveloper.facades.db.SQLFacade;
+import org.drathveloper.facades.mail.MailerFacade;
 import org.drathveloper.models.Match;
 import org.drathveloper.models.MatchList;
 import org.drathveloper.models.User;
@@ -24,6 +26,8 @@ class TinderBot4J implements Runnable {
 
     private SQLFacade dbClient;
 
+    private MailerFacade mailClient;
+
     private final Logger logger = LoggerFactory.getLogger(TinderBot4J.class);
 
     private static final int NUM_AUTH_ATTEMPTS = 3;
@@ -34,6 +38,7 @@ class TinderBot4J implements Runnable {
         try {
             client = TinderClient.getInstance();
             dbClient = MySQLFacade.getInstance();
+            mailClient = MailerFacade.getInstance();
         } catch(FileNotFoundException ex){
             logger.info("Required properties files not found\n" +
                     "Mandatory files:\n" +
@@ -96,7 +101,33 @@ class TinderBot4J implements Runnable {
         for(Match match : unhandledMatches){
             client.sendMessage(match);
         }
+        this.updateMatchesDatabase(matchesList);
+        if(unhandledMatches.size() > 0){
+            this.notifyNewMatches(unhandledMatches.size());
+        }
         logger.info("End handling new matches");
+    }
+
+    private void notifyNewMatches(int numberMatches){
+        logger.info("Start send notification via mail");
+        try {
+            mailClient.sendMail(String.valueOf(numberMatches));
+        } catch(MailerGenericException ex){
+            logger.info(ex.getMessage());
+        }
+        logger.info("End send notification via mail");
+    }
+
+    private void updateMatchesDatabase(MatchList matches){
+        if(matches!=null){
+            if(dbClient.isConnectionAvailable()){
+                dbClient.updateMatches(matches);
+            } else {
+                logger.info("Database not available");
+            }
+        } else {
+            logger.info("Nothing to add to database");
+        }
     }
 
     private void addToDatabase(UserBatch userBatch){

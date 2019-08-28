@@ -1,5 +1,7 @@
 package org.drathveloper.facades.db;
 
+import org.drathveloper.models.Match;
+import org.drathveloper.models.MatchList;
 import org.drathveloper.models.User;
 import org.drathveloper.models.UserBatch;
 import org.slf4j.Logger;
@@ -50,10 +52,34 @@ public class MySQLFacade implements SQLFacade {
             }
             peopleStmt.executeBatch();
             photosStmt.executeBatch();
+            peopleStmt.close();
+            photosStmt.close();
         } catch(SQLException ex){
             logger.info("Error writing users on database: " + ex.getMessage());
         }
         logger.info("End writing users batch on database");
+    }
+
+    @Override
+    public void updateMatches(MatchList matches) {
+        logger.info("Start batch match update on database");
+        PreparedStatement matchesStmt;
+        try {
+            matchesStmt = connection.prepareStatement("UPDATE people SET matched = true WHERE id = ?");
+            for(int i=0; i<matches.size(); i++){
+                this.buildMatchesBatch(matchesStmt, matches.getMatch(i));
+            }
+            matchesStmt.executeBatch();
+            matchesStmt.close();
+        } catch (SQLException ex){
+            logger.info("Error updating matches on database: " + ex.getMessage());
+        }
+        logger.info("End batch match update on database");
+    }
+
+    private void buildMatchesBatch(PreparedStatement ps, Match match) throws SQLException {
+        ps.setString(1, match.getUserId());
+        ps.addBatch();
     }
 
     private void buildPhotosBatch(PreparedStatement ps, User user) throws SQLException {

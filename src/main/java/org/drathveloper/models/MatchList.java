@@ -13,6 +13,10 @@ public class MatchList {
         this.mapToObject(rawMatchesList);
     }
 
+    public int size(){
+        return matches.size();
+    }
+
     public Match getMatch(int index){
         return matches.get(index);
     }
