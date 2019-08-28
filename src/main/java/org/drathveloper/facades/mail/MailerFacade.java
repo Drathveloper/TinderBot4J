@@ -67,10 +67,10 @@ public class MailerFacade {
                 Message message = mailGenerator.getMessage(session, parameters);
                 Transport.send(message);
             } else {
-                throw new MailerGenericException("Message couldn't be sent");
+                throw new MailerGenericException("Message couldn't be sent, mailer not available");
             }
         } catch(MessagingException ex){
-            throw new MailerGenericException("Message couldn't be sent");
+            throw new MailerGenericException(ex.getMessage());
         }
     }
 }

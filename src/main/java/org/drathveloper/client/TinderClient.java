@@ -101,6 +101,7 @@ public class TinderClient {
                     try {
                         logger.info("Not enough likes, trying super like");
                         this.superLikeProfile(likableUser);
+                        break;
                     } catch(NotEnoughLikesException e){
                         logger.info("Not enough likes & super likes, exiting");
                         availableMatches.removeIndex(index);
