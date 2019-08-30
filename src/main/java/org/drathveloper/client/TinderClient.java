@@ -70,7 +70,11 @@ public class TinderClient {
         String jsonBody = jsonParser.objectToJSON(body);
         String url = parameters.getURL(ClientConstants.AUTH_MAPPING);
         Map<String, Object> response = jsonParser.jsonToMap(client.executePost(url, headers, jsonBody));
-        tinderToken = (String) ((Map<String, Object>) response.get("data")).get("api_token");
+        if(response!=null) {
+            tinderToken = (String) ((Map<String, Object>) response.get("data")).get("api_token");
+        } else {
+            throw new HttpGenericException(400, "Bad Request");
+        }
         logger.debug("FB Token: " + parameters.getFbToken());
         logger.debug("Tinder Token: " + tinderToken);
         logger.info("End Tinder authentication process.");
@@ -82,7 +86,8 @@ public class TinderClient {
         String url = parameters.getURL(ClientConstants.METADATA_MAPPING);
         Map<String, Object> output = jsonParser.jsonToMap(client.executeGet(url, headers));
         int remainingLikes = ((Double)((LinkedTreeMap<String, Object>)output.get("rating")).get("likes_remaining")).intValue();
-        logger.info("Likes remaining: " + remainingLikes + "\nEnd checking remaining likes");
+        logger.info("Likes remaining: " + remainingLikes + ".");
+        logger.info("End checking remaining likes");
         return remainingLikes;
     }
 
@@ -162,7 +167,8 @@ public class TinderClient {
         Map<String, Object> output = jsonParser.jsonToMap(client.executeGet(url, headers));
         List<Object> results = (List<Object>) output.get("results");
         availableUsers = new UserBatch(results);
-        logger.info("Found possible matches: " + availableUsers.size() + "\nEnd getting available matches");
+        logger.info("Found possible matches: " + availableUsers.size() + ".");
+        logger.info("End getting available matches");
         return availableUsers;
     }
 

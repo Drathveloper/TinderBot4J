@@ -5,17 +5,24 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.drathveloper.exceptions.HttpGenericException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Date;
 import java.util.Map;
 
 public class HttpClientFacade {
@@ -24,10 +31,22 @@ public class HttpClientFacade {
 
     private static HttpClientFacade instance;
 
-    private final HttpClient client = HttpClientBuilder.create().build();
+    private CloseableHttpClient client;
 
     private HttpClientFacade(){
+        client = HttpClients.createDefault();
+    }
 
+    private HttpClient buildHttpClient() {
+        HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        RequestConfig.Builder requestBuilder = RequestConfig.custom();
+        requestBuilder.setConnectionRequestTimeout(10000);
+        requestBuilder.setConnectTimeout(10000);
+        return clientBuilder
+                .disableAuthCaching()
+                .disableAutomaticRetries()
+                .disableCookieManagement()
+                .build();
     }
 
     public static HttpClientFacade getInstance(){
@@ -60,10 +79,17 @@ public class HttpClientFacade {
 
     private String execute(HttpUriRequest request) throws HttpGenericException {
         String parsedResponse = null;
-        HttpResponse response = null;
+        CloseableHttpResponse response = null;
         try {
+            logger.debug("Started request");
+            long start = new Date().getTime();
             response = client.execute(request);
+            long end = new Date().getTime();
+            logger.debug("Finished request");
+            long ellapsedTime = end - start;
+            logger.debug("Execution time: " + ellapsedTime + " ms");
             if(response.getStatusLine().getStatusCode()!=200){
+                this.releaseResponse(response);
                 throw new HttpGenericException(response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase());
             }
             parsedResponse = this.processResponse(this.parseResponse(response));
@@ -83,15 +109,21 @@ public class HttpClientFacade {
         }
     }
 
-    private String parseResponse(HttpResponse response) throws NullPointerException, IOException {
+    private String parseResponse(CloseableHttpResponse response) throws NullPointerException, IOException {
         String parsedResponse;
         ResponseHandler<String> handler = new BasicResponseHandler();
         parsedResponse = handler.handleResponse(response);
         parsedResponse = parsedResponse != null ? parsedResponse : "";
+        //this.releaseResponse(response);
         return parsedResponse;
     }
 
-    private void printResponseDetails(HttpResponse response){
+    private void releaseResponse(CloseableHttpResponse response) throws IOException{
+        EntityUtils.consume(response.getEntity());
+        response.close();
+    }
+
+    private void printResponseDetails(CloseableHttpResponse response){
         Header[] headers = response.getAllHeaders();
         logger.debug("Reason: " + response.getStatusLine().getReasonPhrase() + "\nCode: " + response.getStatusLine().getStatusCode());
         for(Header h : headers){

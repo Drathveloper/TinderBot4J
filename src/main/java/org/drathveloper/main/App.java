@@ -1,17 +1,14 @@
 package org.drathveloper.main;
 
-public class App 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+public class App
 {
     public static void main( String[] args )
     {
-        Thread t = new Thread(new TinderBot4J());
-        t.start();
-        synchronized (t){
-            try {
-                t.wait();
-            } catch(InterruptedException ex){
-                System.exit(-1);
-            }
-        }
+        final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+        executorService.scheduleAtFixedRate(new TinderBot4J(), 0, 30, TimeUnit.MINUTES);
     }
 }

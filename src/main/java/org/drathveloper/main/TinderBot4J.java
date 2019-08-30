@@ -32,15 +32,13 @@ class TinderBot4J implements Runnable {
 
     private static final int NUM_AUTH_ATTEMPTS = 3;
 
-    private static final long SLEEP_TIME = 3600000;
-
     public TinderBot4J(){
         try {
             client = TinderClient.getInstance();
             dbClient = MySQLFacade.getInstance();
             mailClient = MailerFacade.getInstance();
         } catch(FileNotFoundException ex){
-            logger.info("Required properties files not found\n" +
+            logger.info("Required properties files not found:" +
                     "Mandatory files:\n" +
                     " - application.properties\n" +
                     " - fbtoken.properties (this one can be empty)");
@@ -53,14 +51,14 @@ class TinderBot4J implements Runnable {
     public void run() {
         logger.info("Starting Tinder bot");
         try {
-            this.executeAuthentication();
-            while (true) {
-                this.executeBatchedLike();
-            }
+            //this.executeAuthentication();
+            this.executeBatchedLike();
         } catch (InterruptedException ex) {
             logger.info(ex.getMessage());
+            System.exit(1);
         } catch (HttpGenericException | IOException ex) {
             logger.info("Authentication excedeed the maximum number of attempts: " + NUM_AUTH_ATTEMPTS);
+            System.exit(1);
         }
     }
 
@@ -69,32 +67,35 @@ class TinderBot4J implements Runnable {
         this.authenticate(attempts);
     }
 
-    private void executeBatchedLike() throws InterruptedException, IOException, HttpGenericException {
+    private void executeBatchedLike() throws IOException, HttpGenericException, InterruptedException {
         logger.info("Batched like processing started");
         UserBatch userBatch = null;
-        try {
-            int numLikes = client.getRemainingLikes();
-            if (numLikes > 0) {
-                userBatch = client.getAvailableMatches();
-                printInfo(userBatch);
-                client.batchedLike(userBatch);
-            } else {
-                this.sendMessagesToMatches();
-                logger.info("Sleeping: " + SLEEP_TIME + "ms");
-                Thread.sleep(SLEEP_TIME);
+        boolean keepExecuting = true;
+        while(keepExecuting) {
+            try {
+                int numLikes = client.getRemainingLikes();
+                if(numLikes > 0) {
+                    userBatch = client.getAvailableMatches();
+                    printInfo(userBatch);
+                    client.batchedLike(userBatch);
+                    this.addToDatabase(userBatch);
+                } else {
+                    this.processNewMatches();
+                    keepExecuting = false;
+                }
+            } catch (HttpGenericException ex){
+                if(ex.getCause().getLocalizedMessage().equals("401")){
+                    this.executeAuthentication();
+                }
+            } catch (NotEnoughLikesException ex){
+                logger.info(ex.getMessage());
+                keepExecuting = false;
             }
-        } catch (HttpGenericException ex){
-            if(ex.getCause().getLocalizedMessage().equals("401")){
-                this.executeAuthentication();
-            }
-        } catch (NotEnoughLikesException ex){
-            logger.info(ex.getMessage());
         }
-        this.addToDatabase(userBatch);
         logger.info("Batched like processing ended");
     }
 
-    private void sendMessagesToMatches() throws HttpGenericException {
+    private void processNewMatches() throws HttpGenericException {
         logger.info("Start handling new matches");
         MatchList matchesList = client.getMatchList();
         List<Match> unhandledMatches = matchesList.findMatchesWithoutConversation();
