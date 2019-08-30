@@ -2,18 +2,13 @@ package org.drathveloper.facades;
 
 
 import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.RequestBuilder;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicResponseHandler;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.drathveloper.exceptions.HttpGenericException;
@@ -35,18 +30,6 @@ public class HttpClientFacade {
 
     private HttpClientFacade(){
         client = HttpClients.createDefault();
-    }
-
-    private HttpClient buildHttpClient() {
-        HttpClientBuilder clientBuilder = HttpClientBuilder.create();
-        RequestConfig.Builder requestBuilder = RequestConfig.custom();
-        requestBuilder.setConnectionRequestTimeout(10000);
-        requestBuilder.setConnectTimeout(10000);
-        return clientBuilder
-                .disableAuthCaching()
-                .disableAutomaticRetries()
-                .disableCookieManagement()
-                .build();
     }
 
     public static HttpClientFacade getInstance(){
@@ -114,7 +97,6 @@ public class HttpClientFacade {
         ResponseHandler<String> handler = new BasicResponseHandler();
         parsedResponse = handler.handleResponse(response);
         parsedResponse = parsedResponse != null ? parsedResponse : "";
-        //this.releaseResponse(response);
         return parsedResponse;
     }
 
